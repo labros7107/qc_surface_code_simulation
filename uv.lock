@@ -1,0 +1,23 @@
+version = 1
+revision = 3
+requires-python = ">=3.11"
+
+[[package]]
+name = "pykernel"
+version = "0.1.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/96/8efc4b1393ef360bda5145e17201ed8fe1c2ef5cd5fd7b76bc0fe34a4ecb/pykernel-0.1.6.tar.gz", hash = "sha256:c7030dac432a893ae8a1662e34a68d8d8c0e5957b1c1a88a174a000e96a799c8", size = 15201, upload-time = "2022-05-25T02:21:08.72Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/40/b6549f0482739675cac5ce22f2b99dea82f8b6882060598003ffa076f110/pykernel-0.1.6-py3-none-any.whl", hash = "sha256:3657258809cf2394ec1d622b7155d6ebe27efbfc2065056d3d7ce96b97645bcc", size = 16401, upload-time = "2022-05-25T02:21:06.72Z" },
+]
+
+[[package]]
+name = "surface-code-simulations"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "pykernel" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pykernel", specifier = ">=0.1.6" }]
