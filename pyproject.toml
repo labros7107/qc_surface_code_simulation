@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "matplotlib>=3.10.9",
     "pykernel>=0.1.6",
     "pymatching>=2.3.1",
     "sinter>=1.15.0",
