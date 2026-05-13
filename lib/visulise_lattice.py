@@ -61,10 +61,10 @@ def _parse_circuit(circuit) -> dict:
     #   5. Data qubits = all coords − ancillas
 
     mr_measured: set[int] = set()
+    h_targets: set[int] = set()
     for m in re.finditer(r"^MR\s+([\d\s]+)", circuit_str, re.MULTILINE):
         mr_measured.update(map(int, m.group(1).split()))
 
-    h_targets: set[int] = set()
     for m in re.finditer(r"^H\s+([\d\s]+)", circuit_str, re.MULTILINE):
         h_targets.update(map(int, m.group(1).split()))
 
@@ -84,9 +84,15 @@ def _parse_circuit(circuit) -> dict:
     # OBSERVABLE_INCLUDE(0) rec[-k] ... -> last M instruction, pick qubits
     observable: list[int] = []
     m_matches = list(re.finditer(r"^M\s+([\d\s]+)", circuit_str, re.MULTILINE))
+    mx_matches = list(re.finditer(r"^MX\s+([\d\s]+)", circuit_str, re.MULTILINE))
+
+    matches = m_matches if len(mx_matches) == 0 else mx_matches
+
+
     obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(0\)(.*)", circuit_str))
-    if m_matches and obs_matches:
-        last_m_qubits = list(map(int, m_matches[-1].group(1).split()))
+
+    if matches and obs_matches:
+        last_m_qubits = list(map(int, matches[-1].group(1).split()))
         obs_str = obs_matches[-1].group(1)
         indices = [int(x) for x in re.findall(r"rec\[-(\d+)\]", obs_str)]
         for idx in indices:
