@@ -62,15 +62,35 @@ def _parse_circuit(circuit) -> dict:
 
     mr_measured: set[int] = set()
     h_targets: set[int] = set()
+    rx_targets: set[int] = set()
+    rz_targets: set[int] = set()
+
+    last_one = None
+    for m in re.finditer(r"^RX\s+([\d\s]+)", circuit_str, re.MULTILINE):
+        last_one = m
+
+    if last_one:
+        rx_targets.update(map(int, last_one.group(1).split()))
+
+    last_one = None
+    for m in re.finditer(r"^R\s+([\d\s]+)", circuit_str, re.MULTILINE):
+        last_one = m
+
+    if last_one:
+        rz_targets.update(map(int, last_one.group(1).split()))
+
     for m in re.finditer(r"^MR\s+([\d\s]+)", circuit_str, re.MULTILINE):
         mr_measured.update(map(int, m.group(1).split()))
 
     for m in re.finditer(r"^H\s+([\d\s]+)", circuit_str, re.MULTILINE):
         h_targets.update(map(int, m.group(1).split()))
 
-    x_ancillas:  set[int] = mr_measured & h_targets
-    z_ancillas:  set[int] = mr_measured - x_ancillas
-    data_qubits: set[int] = set(coords) - mr_measured
+    reset_qubits = (rx_targets | rz_targets)
+    mr_measured = mr_measured - reset_qubits
+    x_ancillas:  set[int] = (mr_measured & h_targets)
+    z_ancillas:  set[int] = (mr_measured - x_ancillas)
+    data_qubits: set[int] = (set(coords) - mr_measured - reset_qubits)
+
 
     # ── injected errors ───────────────────────────────────────────────────
     x_errors: set[int] = set()
@@ -85,7 +105,6 @@ def _parse_circuit(circuit) -> dict:
     observable: list[int] = []
     m_matches = list(re.finditer(r"^M\s+([\d\s]+)", circuit_str, re.MULTILINE))
     mx_matches = list(re.finditer(r"^MX\s+([\d\s]+)", circuit_str, re.MULTILINE))
-
     matches = m_matches if len(mx_matches) == 0 else mx_matches
 
 
@@ -116,6 +135,7 @@ def _parse_circuit(circuit) -> dict:
         z_errors=z_errors,
         observable=observable,
         cx_pairs=cx_pairs,
+        reset_qubits=reset_qubits
     )
 
 
@@ -214,14 +234,15 @@ def plot_surface_code(
     """
 
     info = _parse_circuit(circuit)
-    coords      = info["coords"]
-    data_qubits = info["data_qubits"]
-    x_ancillas  = info["x_ancillas"]
-    z_ancillas  = info["z_ancillas"]
-    x_errors    = info["x_errors"]
-    z_errors    = info["z_errors"]
-    observable  = info["observable"]
-    cx_pairs    = info["cx_pairs"]
+    coords       = info["coords"]
+    data_qubits  = info["data_qubits"]
+    x_ancillas   = info["x_ancillas"]
+    z_ancillas   = info["z_ancillas"]
+    x_errors     = info["x_errors"]
+    z_errors     = info["z_errors"]
+    observable   = info["observable"]
+    cx_pairs     = info["cx_pairs"]
+    reset_qubits = info["reset_qubits"]
 
     if not coords:
         raise ValueError("No QUBIT_COORDS found in the circuit string.")
@@ -259,6 +280,7 @@ def plot_surface_code(
         err_z_ec = "#3B6D11",
         obs      = "#A32D2D",
         coupling = "#88878080",
+        reset    = "#FF28E680"
     )
 
     # ── plaquettes ────────────────────────────────────────────────────────
@@ -334,6 +356,25 @@ def plot_surface_code(
         fc = COL["err_x"] if has_x_err else (COL["err_z"] if has_z_err else COL["data"])
         ec = COL["err_x_ec"] if has_x_err else (COL["err_z_ec"] if has_z_err else COL["data_ec"])
         lw = 1.8 if (has_x_err or has_z_err) else 1.0
+        circle = plt.Circle(
+            (x, y), node_r,
+            facecolor=fc, edgecolor=ec, linewidth=lw, zorder=4
+        )
+        ax.add_patch(circle)
+        lc = COL["err_x_ec"] if has_x_err else (COL["err_z_ec"] if has_z_err else "black")
+        _label(ax, q, x, y, color=lc)
+
+# data qubits
+    for q in reset_qubits:
+        if q not in coords:
+            continue
+        x, y = coords[q]
+
+
+        fc = COL["reset"]
+        ec = COL["reset"]
+        lw = 1.0
+
         circle = plt.Circle(
             (x, y), node_r,
             facecolor=fc, edgecolor=ec, linewidth=lw, zorder=4
@@ -467,6 +508,10 @@ H 1 3 11 13 21 23
 TICK
 MR 1 3 5 7 9 11 13 15 17 19 21 23
 TICK
+MRZ 0 1 2
+MRX 3 4 5
+R 0 1
+RX 3
 M 0 2 4 6 8 10 12 14 16 18 20 22 24
 OBSERVABLE_INCLUDE(0) rec[-11] rec[-12] rec[-13]
 """)

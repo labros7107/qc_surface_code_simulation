@@ -167,20 +167,26 @@ REPEAT 2 {
     DETECTOR(9, 4, 0) rec[-1] rec[-28]
 
 }
-M 0 2 4 6 8 10 12 14 16 18 20 22 24 # LEFT
-M 31 43 # MID
-M 26 28 33 35 38 40 42 45 47 50 52 54 # RIGHT
 
-# GOTTA FIX THE FOLLOWING 
-DETECTOR(0, 1, 1) rec[-25]
-DETECTOR(2, 1, 1) rec[-24]
-DETECTOR(4, 1, 1) rec[-23]
-DETECTOR(0, 3, 1) rec[-20]
-DETECTOR(2, 3, 1) rec[-19]
-DETECTOR(4, 3, 1) rec[-18]
-DETECTOR(6, 1, 1) rec[-10]
-DETECTOR(8, 1, 1) rec[-9]
-DETECTOR(10, 1, 1) rec[-8]
-DETECTOR(6, 3, 1) rec[-5]
-DETECTOR(8, 3, 1) rec[-4]
-DETECTOR(10, 3, 1) rec[-3]
+MR 31 43
+MR 25 37 49
+R 31 43 25 37 49
+
+
+#M 0 2 4 6 8 10 12 14 16 18 20 22 24 # LEFT
+#M 31 43 # MID
+#M 26 28 33 35 38 40 42 45 47 50 52 54 # RIGHT
+
+# GOTTA FIX THE FOLLOWING FINAL MEASUREMENTS
+#DETECTOR(0, 1, 1) rec[-25]
+#DETECTOR(2, 1, 1) rec[-24]
+#DETECTOR(4, 1, 1) rec[-23]
+#DETECTOR(0, 3, 1) rec[-20]
+#DETECTOR(2, 3, 1) rec[-19]
+#DETECTOR(4, 3, 1) rec[-18]
+#DETECTOR(6, 1, 1) rec[-10]
+#DETECTOR(8, 1, 1) rec[-9]
+#DETECTOR(10, 1, 1) rec[-8]
+#DETECTOR(6, 3, 1) rec[-5]
+#DETECTOR(8, 3, 1) rec[-4]
+#DETECTOR(10, 3, 1) rec[-3]
