@@ -65,19 +65,9 @@ def _parse_circuit(circuit) -> dict:
     rx_targets: set[int] = set()
     rz_targets: set[int] = set()
 
-    last_one = None
-    for m in re.finditer(r"^RX\s+([\d\s]+)", circuit_str, re.MULTILINE):
-        last_one = m
 
-    if last_one:
-        rx_targets.update(map(int, last_one.group(1).split()))
-
-    last_one = None
-    for m in re.finditer(r"^R\s+([\d\s]+)", circuit_str, re.MULTILINE):
-        last_one = m
-
-    if last_one:
-        rz_targets.update(map(int, last_one.group(1).split()))
+    for m in re.finditer(r"^I\s+([\d\s]+)", circuit_str, re.MULTILINE):
+        rz_targets.update(map(int, m.group(1).split()))
 
     for m in re.finditer(r"^MR\s+([\d\s]+)", circuit_str, re.MULTILINE):
         mr_measured.update(map(int, m.group(1).split()))
@@ -108,7 +98,7 @@ def _parse_circuit(circuit) -> dict:
     matches = m_matches if len(mx_matches) == 0 else mx_matches
 
 
-    obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(0\)(.*)", circuit_str))
+    obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(\d+\)(.*)", circuit_str))
 
     if matches and obs_matches:
         last_m_qubits = list(map(int, matches[-1].group(1).split()))
@@ -364,24 +354,24 @@ def plot_surface_code(
         lc = COL["err_x_ec"] if has_x_err else (COL["err_z_ec"] if has_z_err else "black")
         _label(ax, q, x, y, color=lc)
 
-# data qubits
-    for q in reset_qubits:
-        if q not in coords:
-            continue
-        x, y = coords[q]
+    # # data qubits
+    # for q in reset_qubits:
+    #     if q not in coords:
+    #         continue
+    #     x, y = coords[q]
 
 
-        fc = COL["reset"]
-        ec = COL["reset"]
-        lw = 1.0
+    #     fc = COL["reset"]
+    #     ec = COL["reset"]
+    #     lw = 0
 
-        circle = plt.Circle(
-            (x, y), node_r,
-            facecolor=fc, edgecolor=ec, linewidth=lw, zorder=4
-        )
-        ax.add_patch(circle)
-        lc = COL["err_x_ec"] if has_x_err else (COL["err_z_ec"] if has_z_err else "black")
-        _label(ax, q, x, y, color=lc)
+    #     circle = plt.Circle(
+    #         (x, y), node_r,
+    #         facecolor=fc, edgecolor=ec, linewidth=lw, zorder=4
+    #     )
+    #     ax.add_patch(circle)
+    #     lc = COL["err_x_ec"] if has_x_err else (COL["err_z_ec"] if has_z_err else "black")
+    #     _label(ax, q, x, y, color=lc)
 
     # X ancilla qubits (squares)
     for q in x_ancillas:
@@ -510,8 +500,8 @@ MR 1 3 5 7 9 11 13 15 17 19 21 23
 TICK
 MRZ 0 1 2
 MRX 3 4 5
-R 0 1
-RX 3
+I 0 1
+I 3
 M 0 2 4 6 8 10 12 14 16 18 20 22 24
 OBSERVABLE_INCLUDE(0) rec[-11] rec[-12] rec[-13]
 """)
