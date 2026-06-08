@@ -295,6 +295,7 @@ def exec_mwpm(circuit, shots, seed):
     print("  Raw = 1 on all shots  → X error flipped the logical Z.")
     print("  Corrected = 0         → MWPM identified and cancelled it.")
 
+    return obs_raw
 
 # ---------------------------------------------------------------------------
 # Demo

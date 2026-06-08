@@ -95,7 +95,7 @@ def _parse_circuit(circuit) -> dict:
     observable: list[int] = []
     m_matches = list(re.finditer(r"^M\s+([\d\s]+)", circuit_str, re.MULTILINE))
     mx_matches = list(re.finditer(r"^MX\s+([\d\s]+)", circuit_str, re.MULTILINE))
-    matches = m_matches if len(mx_matches) == 0 else mx_matches
+    matches = m_matches # if len(mx_matches) == 0 else mx_matches
 
 
     obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(\d+\)(.*)", circuit_str))
