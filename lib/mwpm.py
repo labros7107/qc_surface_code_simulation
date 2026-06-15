@@ -292,7 +292,7 @@ def exec_mwpm(circuit, shots, seed):
     print(f"  Corrected logical outcomes: {outcomes.tolist()}")
     print(f"  Logical error rate        : {outcomes.mean():.2f}")
     print()
-    print("  Raw = 1 on all shots  → X error flipped the logical Z.")
+    print("  Raw = 1               → X error flipped the logical Z.")
     print("  Corrected = 0         → MWPM identified and cancelled it.")
 
     return obs_raw

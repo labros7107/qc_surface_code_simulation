@@ -1,18 +1,6 @@
 """
-surface_code_diagram.py
-
 Provides a function to visualize the lattice structure of an unrotated
 surface code given a stim.Circuit (or parsed qubit/ancilla metadata).
-
-Usage:
-    import stim
-    from surface_code_diagram import plot_surface_code
-
-    circuit = stim.Circuit(\"\"\"...\"\"\")
-    plot_surface_code(circuit)
-
-    # Or save to file:
-    plot_surface_code(circuit, save_path="lattice.png")
 """
 
 import re
@@ -24,7 +12,7 @@ import numpy as np
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _parse_circuit(circuit) -> dict:
+def _parse_circuit(circuit, basis: str = "Z") -> dict:
     """
     Extract qubit coordinates, ancilla assignments, errors, and the
     logical observable from a stim.Circuit.
@@ -38,6 +26,7 @@ def _parse_circuit(circuit) -> dict:
         z_errors        : set of qubit indices with injected Z errors
         observable      : list of qubit indices in the logical observable
         cx_pairs        : list of (control, target) pairs (for coupling edges)
+        reset_qubit     : list of identity operators on qubits to indicate splits
     """
     circuit_str = str(circuit)
 
@@ -95,8 +84,7 @@ def _parse_circuit(circuit) -> dict:
     observable: list[int] = []
     m_matches = list(re.finditer(r"^M\s+([\d\s]+)", circuit_str, re.MULTILINE))
     mx_matches = list(re.finditer(r"^MX\s+([\d\s]+)", circuit_str, re.MULTILINE))
-    matches = m_matches # if len(mx_matches) == 0 else mx_matches
-
+    matches = m_matches if basis == "Z" else mx_matches
 
     obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(\d+\)(.*)", circuit_str))
 
@@ -182,6 +170,7 @@ def plot_surface_code(
     circuit,
     *,
     title: str = "Unrotated Surface Code Lattice",
+    basis: str = "Z",
     figsize: tuple[float, float] = (9, 9),
     show_qubit_labels: bool = True,
     show_couplings: bool = True,
