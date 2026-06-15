@@ -1,3 +1,7 @@
+'''
+A utiliy file to keep useful functions for debugging or visualisation purposes
+'''
+
 import numpy as np
 
 
