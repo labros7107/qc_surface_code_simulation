@@ -785,8 +785,7 @@ REPEAT 6 {
     DETECTOR(7, 10, 0) rec[-2] rec[-56]
     DETECTOR(9, 10, 0) rec[-1] rec[-55]
 }
-X_ERROR(1) 0 22 44
-I 16 38 60 82 104 56 58 62 64
+
 
 ### HORIZONTAL MERGE
 TICK
@@ -864,6 +863,7 @@ DETECTOR(8, 9, 0) rec[-4] rec[-58]
 DETECTOR(10, 9, 0) rec[-3] rec[-57]
 DETECTOR(7, 10, 0) rec[-2] rec[-56]
 DETECTOR(9, 10, 0) rec[-1] rec[-55]
+
 
 REPEAT 6 {
     TICK
@@ -944,6 +944,10 @@ REPEAT 6 {
     DETECTOR(7, 10, 0) rec[-2] rec[-56]
     DETECTOR(9, 10, 0) rec[-1] rec[-55]
 }
+TICK
+X_ERROR(1) 66 88 110
+I 16 38 60 82 104 56 58 62 64
+TICK
 
 # MERGE VERTICAL
 TICK
@@ -1265,3 +1269,4 @@ DETECTOR(8, 9, 1) rec[-2] rec[-4] rec[-5] rec[-7] rec[-65]
 DETECTOR(10, 9, 1) rec[-1] rec[-4] rec[-6] rec[-64]
 
 OBSERVABLE_INCLUDE(0) rec[-36] rec[-35] rec[-34] rec[-3] rec[-2] rec[-1]
+OBSERVABLE_INCLUDE(1) rec[-61] rec[-60] rec[-59] rec[-28] rec[-27] rec[-26]

@@ -270,11 +270,12 @@ def measure_logical(
     )
 
     corrected = np.empty(num_shots, dtype=np.uint8)
+    print(obs_samples)
     for i in range(num_shots):
         # predicted_flip[j] = 1 if MWPM thinks observable j was flipped
         predicted_flip = matcher.decode(det_samples[i])
         # XOR: raw parity cancels with correction if MWPM is right
-        corrected[i] = int(obs_samples[i, 0]) ^ int(predicted_flip[0])
+        corrected[i] = (int(obs_samples[i, 0]) or int(obs_samples[i, 1])) ^ int(predicted_flip[0])
 
     return corrected
 
@@ -286,7 +287,7 @@ def exec_mwpm(circuit, shots, seed):
 
     sampler = circuit.compile_detector_sampler(seed=seed)
     _, obs_raw = sampler.sample(shots=shots, separate_observables=True)
-    raw = obs_raw[:, 0].astype(int).tolist()
+    raw = np.logical_and(obs_raw[:, 0], obs_raw[:, 1]).astype(int).tolist()
 
     print(f"  Raw observable parities   : {raw}")
     print(f"  Corrected logical outcomes: {outcomes.tolist()}")

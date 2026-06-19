@@ -80,22 +80,29 @@ def _parse_circuit(circuit, basis: str = "Z") -> dict:
         z_errors.update(map(int, m.group(1).split()))
 
     # ── logical observable ────────────────────────────────────────────────
-    # OBSERVABLE_INCLUDE(0) rec[-k] ... -> last M instruction, pick qubits
-    observable: list[int] = []
-    m_matches = list(re.finditer(r"^M\s+([\d\s]+)", circuit_str, re.MULTILINE))
-    mx_matches = list(re.finditer(r"^MX\s+([\d\s]+)", circuit_str, re.MULTILINE))
-    matches = m_matches if basis == "Z" else mx_matches
+    # OBSERVABLE_INCLUDE(k) rec[-i] ... — rec offsets index into the
+    # accumulated measurement record at that point (not just the nearest M).
+    # Returns dict {observable_index: [qubit_indices]}
+    observable_qubits: dict[int, list[int]] = {}
 
-    obs_matches = list(re.finditer(r"OBSERVABLE_INCLUDE\(\d+\)(.*)", circuit_str))
-
-    if matches and obs_matches:
-        last_m_qubits = list(map(int, matches[-1].group(1).split()))
-        obs_str = obs_matches[-1].group(1)
-        indices = [int(x) for x in re.findall(r"rec\[-(\d+)\]", obs_str)]
-        for idx in indices:
-            qi = len(last_m_qubits) - idx  # rec[-1] = last measured = index -1
-            if 0 <= qi < len(last_m_qubits):
-                observable.append(last_m_qubits[qi])
+    meas_record: list[int] = []  # qubit indices in measurement order
+    for m in re.finditer(
+        r"^(M|MX)\s+([\d\s]+)|OBSERVABLE_INCLUDE\((\d+)\)(.*)",
+        circuit_str, re.MULTILINE,
+    ):
+        if m.group(1):   # M or MX instruction
+            qubits = list(map(int, m.group(2).split()))
+            meas_record.extend(qubits)
+        else:            # OBSERVABLE_INCLUDE(k) rec[-i] ...
+            obs_idx = int(m.group(3))
+            obs_str = m.group(4)
+            indices = [int(x) for x in re.findall(r"rec\[-(\d+)\]", obs_str)]
+            qubits_for_obs: list[int] = []
+            for idx in indices:
+                qi = len(meas_record) - idx  # rec[-1] = last, rec[-2] = second-last, ...
+                if 0 <= qi < len(meas_record):
+                    qubits_for_obs.append(meas_record[qi])
+            observable_qubits.setdefault(obs_idx, []).extend(qubits_for_obs)
 
     # ── CX pairs (for drawing coupling edges) ────────────────────────────
     cx_pairs: list[tuple[int, int]] = []
@@ -111,7 +118,7 @@ def _parse_circuit(circuit, basis: str = "Z") -> dict:
         z_ancillas=z_ancillas,
         x_errors=x_errors,
         z_errors=z_errors,
-        observable=observable,
+        observable_qubits=observable_qubits,
         cx_pairs=cx_pairs,
         reset_qubits=reset_qubits
     )
@@ -219,7 +226,7 @@ def plot_surface_code(
     z_ancillas   = info["z_ancillas"]
     x_errors     = info["x_errors"]
     z_errors     = info["z_errors"]
-    observable   = info["observable"]
+    observable_qubits = info["observable_qubits"]
     cx_pairs     = info["cx_pairs"]
     reset_qubits = info["reset_qubits"]
 
@@ -257,7 +264,10 @@ def plot_surface_code(
         err_x_ec = "#A32D2D",
         err_z    = "#C0DD97",
         err_z_ec = "#3B6D11",
-        obs      = "#A32D2D",
+        obs_0    = "#A32D2D",   # observable 0
+        obs_1    = "#2D5AA3",   # observable 1
+        obs_2    = "#8B2DA3",   # observable 2
+        obs_3    = "#2DA38B",   # observable 3
         coupling = "#88878080",
         reset    = "#FF28E680"
     )
@@ -299,15 +309,19 @@ def plot_surface_code(
                 color=COL["coupling"], linewidth=1.0, zorder=2, solid_capstyle="round"
             )
 
-    # ── logical observable bar ────────────────────────────────────────────
-    if show_observable and observable:
-        obs_coords = [coords[q] for q in observable if q in coords]
-        if obs_coords:
+    # ── logical observable bars ──────────────────────────────────────────
+    obs_color_keys = ["obs_0", "obs_1", "obs_2", "obs_3"]
+    if show_observable and observable_qubits:
+        for obs_idx, qubits in sorted(observable_qubits.items()):
+            obs_coords = [coords[q] for q in qubits if q in coords]
+            if not obs_coords:
+                continue
             obs_xs = [c[0] for c in obs_coords]
             obs_ys = [c[1] for c in obs_coords]
+            color = COL["obs_0"] # COL.get(obs_color_keys[obs_idx] if obs_idx < len(obs_color_keys) else obs_color_keys[0], COL["obs_0"])
             ax.plot(
                 obs_xs, obs_ys,
-                color=COL["obs"], linewidth=3.5, linestyle="--",
+                color=color, linewidth=3.5, linestyle="--",
                 zorder=3, alpha=0.8, solid_capstyle="round",
             )
 
@@ -413,11 +427,13 @@ def plot_surface_code(
                        markerfacecolor=COL["err_x"], markeredgecolor=COL["err_x_ec"],
                        markersize=11, label="X error", markeredgewidth=1.5)
             )
-        if observable and show_observable:
-            handles.append(
-                Line2D([0], [0], color=COL["obs"], linewidth=2.5,
-                       linestyle="--", label="Logical X̄ observable")
-            )
+        if observable_qubits and show_observable:
+            for obs_idx in sorted(observable_qubits):
+                color = COL["obs_0"] # COL.get(obs_color_keys[obs_idx] if obs_idx < len(obs_color_keys) else obs_color_keys[0], COL["obs_0"])
+                handles.append(
+                    Line2D([0], [0], color=color, linewidth=2.5,
+                           linestyle="--", label=f"Logical observable {obs_idx}")
+                )
         ax.legend(
             handles=handles, loc="upper right",
             fontsize=9, framealpha=0.92, edgecolor="#ccc",
