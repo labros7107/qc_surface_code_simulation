@@ -1,0 +1,116 @@
+Resolved 60 packages in 535ms
+   Building qiskit-qec @ file:///home/samir/research/experiments/surface_code_simulations/qiskit-qec
+  × Failed to build `qiskit-qec @ file:///home/samir/research/experiments/surface_code_simulations/qiskit-qec`
+  ├─▶ The build backend returned an error
+  ╰─▶ Call to `setuptools.build_meta.build_editable` failed (exit status: 1)
+
+      [stdout]
+      running editable_wheel
+      creating /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info
+      writing /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/PKG-INFO
+      writing dependency_links to /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/dependency_links.txt
+      writing requirements to /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/requires.txt
+      writing top-level names to /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/top_level.txt
+      writing manifest file '/home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/SOURCES.txt'
+      reading manifest file '/home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/SOURCES.txt'
+      reading manifest template 'MANIFEST.in'
+      adding license file 'LICENSE.txt'
+      writing manifest file '/home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec.egg-info/SOURCES.txt'
+      creating '/home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec-0.0.1.dist-info'
+      creating /home/samir/.cache/uv/builds-v0/.tmppnWZGp/.tmp-unc215df/qiskit_qec-0.0.1.dist-info/WHEEL
+      running build_py
+      running build_ext
+      -- The C compiler identification is GNU 16.1.1
+      -- The CXX compiler identification is GNU 16.1.1
+      -- Detecting C compiler ABI info
+      -- Detecting C compiler ABI info - done
+      -- Check for working C compiler: /usr/bin/cc - skipped
+      -- Detecting C compile features
+      -- Detecting C compile features - done
+      -- Detecting CXX compiler ABI info
+      -- Detecting CXX compiler ABI info - done
+      -- Check for working CXX compiler: /usr/bin/c++ - skipped
+      -- Detecting CXX compile features
+      -- Detecting CXX compile features - done
+      -- Configuring incomplete, errors occurred!
+
+      [stderr]
+      /home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/dist.py:765: SetuptoolsDeprecationWarning: License classifiers are deprecated.
+      !!
+
+              ********************************************************************************
+              Please consider removing the following classifiers in favor of a SPDX license expression:
+
+              License :: OSI Approved :: Apache Software License
+
+              See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+              ********************************************************************************
+
+      !!
+        self._finalize_license_expression()
+      CMake Error at extern/pybind11/CMakeLists.txt:8 (cmake_minimum_required):
+        Compatibility with CMake < 3.5 has been removed from CMake.
+
+        Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+        to tell CMake that the project requires at least <min> but has been updated
+        to work with policies introduced by <max> or earlier.
+
+        Or, add -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to try configuring anyway.
+
+      
+      Traceback (most recent call last):
+        File "<string>", line 11, in <module>
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/build_meta.py", line 474, in build_editable
+          return self._build_with_temp_dir(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/build_meta.py", line 410, in _build_with_temp_dir
+          self.run_setup()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/build_meta.py", line 317, in run_setup
+          exec(code, locals())
+        File "<string>", line 151, in <module>
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/__init__.py", line 117, in setup
+          return distutils.core.setup(**attrs)  # type: ignore[return-value]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/core.py", line 186, in setup
+          return run_commands(dist)
+                 ^^^^^^^^^^^^^^^^^^
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/core.py", line 202, in run_commands
+          dist.run_commands()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/dist.py", line 1001, in run_commands
+          self.run_command(cmd)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/dist.py", line 1107, in run_command
+          super().run_command(command)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/dist.py", line 1020, in run_command
+          cmd_obj.run()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/command/editable_wheel.py", line 140, in run
+          self._create_wheel_file(bdist_wheel)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/command/editable_wheel.py", line 350, in _create_wheel_file
+          files, mapping = self._run_build_commands(dist_name, unpacked, lib, tmp)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/command/editable_wheel.py", line 273, in _run_build_commands
+          self._run_build_subcommands()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/command/editable_wheel.py", line 300, in _run_build_subcommands
+          self.run_command(name)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/cmd.py", line 341, in run_command
+          self.distribution.run_command(command)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/dist.py", line 1107, in run_command
+          super().run_command(command)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/dist.py", line 1020, in run_command
+          cmd_obj.run()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/command/build_ext.py", line 97, in run
+          _build_ext.run(self)
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/command/build_ext.py", line 367, in run
+          self.build_extensions()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/command/build_ext.py", line 483, in build_extensions
+          self._build_extensions_serial()
+        File "/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/lib/python3.12/site-packages/setuptools/_distutils/command/build_ext.py", line 509, in _build_extensions_serial
+          self.build_extension(ext)
+        File "<string>", line 128, in build_extension
+        File "/home/samir/.local/share/uv/python/cpython-3.12.11-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 571, in run
+          raise CalledProcessError(retcode, process.args,
+      subprocess.CalledProcessError: Command '['cmake', '/home/samir/research/experiments/surface_code_simulations/qiskit-qec', '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/tmp/tmpk8gf1oq3.build-lib/qiskit_qec/circuits/', '-DPYTHON_EXECUTABLE=/home/samir/.cache/uv/builds-v0/.tmp0HyCTX/bin/python', '-DCMAKE_BUILD_TYPE=Release', '-DEXAMPLE_VERSION_INFO=0.0.1']' returned non-zero exit
+      status 1.
+      An error occurred when building editable wheel for qiskit_qec.
+      See debugging tips in: https://setuptools.pypa.io/en/latest/userguide/development_mode.html#debugging-tips
+
+      hint: This usually indicates a problem with the package or the build environment.
