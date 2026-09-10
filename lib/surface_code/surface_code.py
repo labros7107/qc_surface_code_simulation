@@ -30,7 +30,7 @@ from lib.surface_code.decoding_graph import DecodingGraphNode
 class SurfaceCodeCircuit():
     """Distance d rotated surface code with  T syndrome measurement rounds."""
 
-    def __init__(self, d: int, T: int, basis: str = "z", resets=True):
+    def __init__(self, d: int, T: int, basis: str = "z", resets=True, is_final=True):
         """Creates the circuits corresponding to logical basis states.
 
         Creates the circuits corresponding to logical basis states encoded
@@ -57,6 +57,17 @@ class SurfaceCodeCircuit():
         self.basis = basis
         self._resets = resets
 
+        # rotated surface codes tile evenly only for odd d; d=2 is supported as
+        # a special case (a valid error-detecting code with an unbalanced
+        # Z/X plaquette split)
+        if d < 2:
+            raise ValueError("Surface code distance must be at least 2.")
+        if d % 2 == 0 and d != 2:
+            raise NotImplementedError(
+                "Even code distances are only supported for d=2, the smallest "
+                "even rotated surface code. Larger even d is not implemented."
+            )
+
         # get layout of plaquettes
         self.zplaqs, self.xplaqs, self._zplaq_coords, self._xplaq_coords = self._get_plaquettes()
 
@@ -78,11 +89,12 @@ class SurfaceCodeCircuit():
         self.z_logical = [self._logicals["z"][0]]
         self.z_boundary = [self._logicals["z"][0] + self._logicals["z"][1]]
 
-        # quantum registers
-        self._num_xy = int((d**2 - 1) / 2)
+        # quantum registers (the number of Z and X plaquettes can differ, e.g. d=2)
+        self._num_z = len(self.zplaqs)
+        self._num_x = len(self.xplaqs)
         self.code_qubit = QuantumRegister(d**2, "code_qubit")
-        self.zplaq_qubit = QuantumRegister(self._num_xy, "zplaq_qubit")
-        self.xplaq_qubit = QuantumRegister(self._num_xy, "xplaq_qubit")
+        self.zplaq_qubit = QuantumRegister(self._num_z, "zplaq_qubit")
+        self.xplaq_qubit = QuantumRegister(self._num_x, "xplaq_qubit")
         self.qubit_registers = [self.code_qubit, self.zplaq_qubit, self.xplaq_qubit]
 
         # classical registers
@@ -104,9 +116,10 @@ class SurfaceCodeCircuit():
         # add the gates required for syndrome measurements
         for _ in range(T - 1):
             self.syndrome_measurement()
-        if T != 0:
+        if T != 0 and is_final:
             self.syndrome_measurement(final=True)
             self.readout()
+
 
     def _get_plaquettes(self):
         """
@@ -116,6 +129,20 @@ class SurfaceCodeCircuit():
         """
 
         d = self.d
+
+        if d == 2:
+            # Canonical distance-2 rotated code (as in stim's rotated d=2): a
+            # single Z stabiliser on all four data qubits and X stabilisers on
+            # each row. Data layout is row-major:
+            #   q0 q1   (top)
+            #   q2 q3   (bottom)
+            # Every single-qubit error anticommutes with at least one
+            # stabiliser, so the code detects (but does not correct) errors.
+            zplaqs = [[0, 1, 2, 3]]
+            xplaqs = [[0, 1, None, None], [None, None, 2, 3]]
+            zplaq_coords = [(0, 0)]
+            xplaq_coords = [(0, -1), (0, 1)]
+            return zplaqs, xplaqs, zplaq_coords, xplaq_coords
 
         zplaqs = []
         xplaqs = []
@@ -211,10 +238,10 @@ class SurfaceCodeCircuit():
 
         # classical registers for this round
         self.zplaq_bits.append(
-            ClassicalRegister(self._num_xy, "round_" + str(self.T) + "_zplaq_bit")
+            ClassicalRegister(self._num_z, "round_" + str(self.T) + "_zplaq_bit")
         )
         self.xplaq_bits.append(
-            ClassicalRegister(self._num_xy, "round_" + str(self.T) + "_xplaq_bit")
+            ClassicalRegister(self._num_x, "round_" + str(self.T) + "_xplaq_bit")
         )
 
         for log in ["0", "1"]:
@@ -235,11 +262,13 @@ class SurfaceCodeCircuit():
 
             self.circuit[log].h(self.xplaq_qubit)
 
-            for j in range(self._num_xy):
+            for j in range(self._num_x):
                 self.circuit[log].measure(self.xplaq_qubit[j], self.xplaq_bits[self.T][j])
-                self.circuit[log].measure(self.zplaq_qubit[j], self.zplaq_bits[self.T][j])
                 if self._resets and not final:
                     self.circuit[log].reset(self.xplaq_qubit[j])
+            for j in range(self._num_z):
+                self.circuit[log].measure(self.zplaq_qubit[j], self.zplaq_bits[self.T][j])
+                if self._resets and not final:
                     self.circuit[log].reset(self.zplaq_qubit[j])
 
             if barrier:
@@ -515,3 +544,270 @@ class SurfaceCodeCircuit():
             nodes (dictionary in the form of the return value of string2nodes)
         """
         return not bool(len(nodes) % 2)
+
+
+
+class RoughMergeCircuit(SurfaceCodeCircuit):
+    """Two distance-d rotated surface codes side-by-side, undergoing a rough
+    (X_L X_L) merge. The merged circuit combines the left and right code
+    circuits and adds a row of `d` X-parity checks across the seam between
+    them; the XOR of the seam outcomes equals X_L(left) * X_L(right).
+    """
+
+    def __init__(self, d, T, basis="z", resets=True, is_final=True, flip=None):
+        # T=0 keeps the base init from building an unused standalone code; the
+        # left/right codes below are the real ones carrying the syndrome rounds.
+        super().__init__(d, T=0, basis=basis, resets=resets, is_final=False)
+
+        self.left_code = SurfaceCodeCircuit(d=d, T=T, basis=basis, resets=resets, is_final=False)
+        self.right_code = SurfaceCodeCircuit(d=d, T=T, basis=basis, resets=resets, is_final=False)
+
+        if flip == "z":
+            self.left_code.z(["0", "1"])
+
+        elif flip == "x":
+            self.left_code.x(["0", "1"])
+
+        # the merge seam: right column of the left code faces the left column
+        # of the right code, row by row (both are X-logical boundaries)
+        self.merge_ancillas = d
+        self.merge_ancilla = QuantumRegister(d, "merge_qubit")
+        self.merge_pairs = [((j + 1) * d - 1, j * d) for j in range(d)]
+
+        self.d = d
+        self.n = 2 * d**2 + self.merge_ancillas
+        self.T = self.left_code.T
+        self.basis = basis
+        self._resets = resets
+
+        self.circuit = {}
+        for log in ("0", "1"):
+            self.circuit[log] = self._build_merged_circuit(log)
+        self.base = "0"
+
+        if is_final:
+            self.readout()
+
+    def readout(self):
+        """Final measurement of both codes' data qubits, corresponding to a
+        logical measurement of each code (and allowing a final syndrome to be
+        inferred). As with the single code, the data qubits are measured in X
+        when the codes were prepared in the X basis.
+        """
+        for log in ("0", "1"):
+            qc = self.circuit[log]
+            reg_l = next(r for r in qc.qregs if r.name == "code_qubit")
+            reg_r = next(r for r in qc.qregs if r.name == "right_code_qubit")
+
+            creg_names = {r.name for r in qc.cregs}
+            if "code_bit" in creg_names:
+                bits_l = next(r for r in qc.cregs if r.name == "code_bit")
+            else:
+                bits_l = ClassicalRegister(self.d**2, "code_bit")
+                qc.add_register(bits_l)
+            if "right_code_bit" in creg_names:
+                bits_r = next(r for r in qc.cregs if r.name == "right_code_bit")
+            else:
+                bits_r = ClassicalRegister(self.d**2, "right_code_bit")
+                qc.add_register(bits_r)
+
+            if self.basis == "x":
+                qc.h(reg_l)
+                qc.h(reg_r)
+            qc.measure(reg_l, bits_l)
+            qc.measure(reg_r, bits_r)
+
+    def _build_merged_circuit(self, log):
+        """Combine the left and right code circuits into a single circuit,
+        then append the X-parity merge round(s).
+
+        The left code's registers are reused as-is; the right code's registers
+        are copied under a "right_" prefix so register names do not collide.
+        """
+        qc_l = self.left_code.circuit[log]
+        qc_r = self.right_code.circuit[log]
+
+        right_qregs = [QuantumRegister(r.size, "right_" + r.name) for r in qc_r.qregs]
+        right_cregs = [ClassicalRegister(r.size, "right_" + r.name) for r in qc_r.cregs]
+
+        combined = QuantumCircuit(
+            *qc_l.qregs, *qc_l.cregs,
+            *right_qregs, *right_cregs,
+            self.merge_ancilla,
+            name="merge_" + log,
+        )
+
+        # qc_l as base, then qc_r's qubits and gates appended onto it
+        left_qubits = [q for reg in qc_l.qregs for q in reg]
+        left_clbits = [c for reg in qc_l.cregs for c in reg]
+        right_qubits = [q for reg in right_qregs for q in reg]
+        right_clbits = [c for reg in right_cregs for c in reg]
+        combined.compose(qc_l, qubits=left_qubits, clbits=left_clbits, inplace=True)
+        combined.compose(qc_r, qubits=right_qubits, clbits=right_clbits, inplace=True)
+
+        # data qubits of each code within the combined circuit (right registers
+        # follow all of the left code's registers, including its syndrome
+        # ancillas)
+        code_l = combined.qubits[0:self.d**2]
+        code_r = combined.qubits[qc_l.num_qubits:qc_l.num_qubits + self.d**2]
+
+        # one seam round per syndrome round the codes ran (at least one)
+        n_merge = self.left_code.T or 1
+        for t in range(n_merge):
+            self._merge_round(combined, code_l, code_r, t)
+
+        return combined
+
+    def _merge_round(self, merged, code_l, code_r, t):
+        """One X-parity round across the seam, mirroring an X-plaquette
+        measurement: |0>, H, CNOT to each facing data qubit, H, measure.
+        """
+        creg = ClassicalRegister(self.merge_ancillas,
+                                 "round_" + str(t) + "_merge_bit")
+        merged.add_register(creg)
+
+        merged.h(self.merge_ancilla)
+        for k, (left_idx, right_idx) in enumerate(self.merge_pairs):
+            merged.cx(self.merge_ancilla[k], code_l[left_idx])
+            merged.cx(self.merge_ancilla[k], code_r[right_idx])
+        merged.h(self.merge_ancilla)
+
+        for k in range(self.merge_ancillas):
+            merged.measure(self.merge_ancilla[k], creg[k])
+            if self._resets:
+                merged.reset(self.merge_ancilla[k])
+
+
+class SmoothMergeCircuit(SurfaceCodeCircuit):
+    """Two distance-d rotated surface codes stacked vertically, undergoing a
+    smooth (Z_L Z_L) merge. The merged circuit combines the two code circuits
+    and adds a row of `d` Z-parity checks along the seam between the bottom
+    row of the upper code and the top row of the lower one; the XOR of the
+    seam outcomes equals Z_L(upper) * Z_L(lower).
+    """
+
+    def __init__(self, d, T, basis="z", resets=True, is_final=True, flip=None):
+        # T=0 keeps the base init from building an unused standalone code; the
+        # upper/lower codes below are the real ones carrying the syndrome rounds.
+        super().__init__(d, T=0, basis=basis, resets=resets, is_final=False)
+
+        self.upper_code = SurfaceCodeCircuit(d=d, T=T, basis=basis, resets=resets, is_final=False)
+        self.lower_code = SurfaceCodeCircuit(d=d, T=T, basis=basis, resets=resets, is_final=False)
+
+        if flip == "z":
+            self.upper_code.z(["0", "1"])
+        
+        elif flip == "x":
+            self.upper_code.x(["0", "1"])
+
+        # the merge seam: bottom row of the upper code faces the top row of
+        # the lower code, column by column (both are Z-logical boundaries)
+        self.merge_ancillas = d
+        self.merge_ancilla = QuantumRegister(d, "merge_qubit")
+        self.merge_pairs = [(d * (d - 1) + j, j) for j in range(d)]
+
+        self.d = d
+        self.n = 2 * d**2 + self.merge_ancillas
+        self.T = self.upper_code.T
+        self.basis = basis
+        self._resets = resets
+
+        self.circuit = {}
+        for log in ("0", "1"):
+            self.circuit[log] = self._build_merged_circuit(log)
+        self.base = "0"
+
+        if is_final:
+            self.readout()
+
+    def readout(self):
+        """Final measurement of both codes' data qubits, corresponding to a
+        logical measurement of each code. As with the single code, the data
+        qubits are measured in X when the codes were prepared in the X basis.
+        """
+        for log in ("0", "1"):
+            qc = self.circuit[log]
+            reg_u = next(r for r in qc.qregs if r.name == "code_qubit")
+            reg_l = next(r for r in qc.qregs if r.name == "right_code_qubit")
+
+            creg_names = {r.name for r in qc.cregs}
+            if "code_bit" in creg_names:
+                bits_u = next(r for r in qc.cregs if r.name == "code_bit")
+            else:
+                bits_u = ClassicalRegister(self.d**2, "code_bit")
+                qc.add_register(bits_u)
+            if "right_code_bit" in creg_names:
+                bits_l = next(r for r in qc.cregs if r.name == "right_code_bit")
+            else:
+                bits_l = ClassicalRegister(self.d**2, "right_code_bit")
+                qc.add_register(bits_l)
+
+            if self.basis == "x":
+                qc.h(reg_u)
+                qc.h(reg_l)
+            qc.measure(reg_u, bits_u)
+            qc.measure(reg_l, bits_l)
+
+    def _build_merged_circuit(self, log):
+        """Combine the upper and lower code circuits into a single circuit,
+        then append the Z-parity merge round(s).
+
+        The upper code's registers are reused as-is; the lower code's
+        registers are copied under a "right_" prefix so register names do not
+        collide.
+        """
+        qc_u = self.upper_code.circuit[log]
+        qc_l = self.lower_code.circuit[log]
+
+        right_qregs = [QuantumRegister(r.size, "right_" + r.name) for r in qc_l.qregs]
+        right_cregs = [ClassicalRegister(r.size, "right_" + r.name) for r in qc_l.cregs]
+
+        combined = QuantumCircuit(
+            *qc_u.qregs, *qc_u.cregs,
+            *right_qregs, *right_cregs,
+            self.merge_ancilla,
+            name="merge_" + log,
+        )
+
+        # qc_u as base, then qc_l's qubits and gates appended onto it
+        upper_qubits = [q for reg in qc_u.qregs for q in reg]
+        upper_clbits = [c for reg in qc_u.cregs for c in reg]
+        lower_qubits = [q for reg in right_qregs for q in reg]
+        lower_clbits = [c for reg in right_cregs for c in reg]
+        combined.compose(qc_u, qubits=upper_qubits, clbits=upper_clbits, inplace=True)
+        combined.compose(qc_l, qubits=lower_qubits, clbits=lower_clbits, inplace=True)
+
+        # data qubits of each code within the combined circuit (lower
+        # registers follow all of the upper code's registers, including its
+        # syndrome ancillas)
+        code_u = combined.qubits[0:self.d**2]
+        code_l = combined.qubits[qc_u.num_qubits:qc_u.num_qubits + self.d**2]
+
+        # one seam round per syndrome round the codes ran (at least one)
+        n_merge = self.upper_code.T or 1
+        for t in range(n_merge):
+            self._merge_round(combined, code_u, code_l, t)
+
+        return combined
+
+    def _merge_round(self, merged, code_u, code_l, t):
+        """One Z-parity round across the seam, mirroring a Z-plaquette
+        measurement: |0>, CNOT from each facing data qubit to the ancilla,
+        measure.
+        """
+        creg = ClassicalRegister(self.merge_ancillas,
+                                 "round_" + str(t) + "_merge_bit")
+        merged.add_register(creg)
+
+        for k, (upper_idx, lower_idx) in enumerate(self.merge_pairs):
+            merged.cx(code_u[upper_idx], self.merge_ancilla[k])
+            merged.cx(code_l[lower_idx], self.merge_ancilla[k])
+
+        for k in range(self.merge_ancillas):
+            merged.measure(self.merge_ancilla[k], creg[k])
+            if self._resets:
+                merged.reset(self.merge_ancilla[k])
+
+
+
+
